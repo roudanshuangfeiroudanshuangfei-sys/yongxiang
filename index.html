@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>江南7怪谈 - 阅读规则</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 仅引入 Tailwind CSS 用于基础排版，极其稳定 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; background-color: #0a0a0a; overflow: hidden; font-family: sans-serif; }
+        
+        /* 原生 CSS 动画替代 Framer Motion */
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            20% { transform: scale(1.15); opacity: 0.8; }
+            40% { transform: scale(1.05); opacity: 0.4; }
+            60% { transform: scale(1.1); opacity: 0.7; }
+        }
+        .animate-heartbeat {
+            animation: heartbeat 2.5s infinite ease-in-out;
+        }
+
+        /* 页面切换过渡动画 */
+        .page-transition {
+            opacity: 0;
+            transform: translateY(20px);
+            filter: blur(5px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out, filter 0.8s ease-out;
+        }
+        .page-visible {
+            opacity: 1;
+            transform: translateY(0);
+            filter: blur(0);
+        }
+
+        /* 背景缓慢移动动画 */
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0); opacity: 0.1; }
+            50% { transform: translate(50px, 30px); opacity: 0.2; }
+        }
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0); opacity: 0.1; }
+            50% { transform: translate(-40px, -40px); opacity: 0.15; }
+        }
+        .bg-float-1 { animation: float1 20s infinite ease-in-out; }
+        .bg-float-2 { animation: float2 25s infinite ease-in-out; animation-delay: 2s; }
+    </style>
+</head>
+<body class="text-neutral-200 selection:bg-red-900 selection:text-white">
+
+    <!-- 纯 CSS 背景系统 -->
+    <div class="fixed inset-0 z-0 pointer-events-none">
+        <div class="absolute inset-0 bg-neutral-950"></div>
+        <div class="absolute inset-0 z-0 flex items-center justify-center animate-heartbeat">
+            <div class="w-[40vw] h-[40vw] bg-[radial-gradient(circle,_rgba(220,38,38,0.3)_0%,_transparent_60%)] blur-[40px] rounded-full mix-blend-screen absolute"></div>
+        </div>
+        <div class="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] bg-red-950/20 blur-[120px] rounded-full mix-blend-screen bg-float-1"></div>
+        <div class="absolute bottom-[-20%] right-[-10%] w-[80vw] h-[80vw] bg-neutral-800/20 blur-[150px] rounded-full mix-blend-screen bg-float-2"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_10%,rgba(0,0,0,0.95)_90%)]"></div>
+    </div>
+
+    <!-- 顶部进度条 -->
+    <div class="fixed top-0 left-0 h-1 bg-neutral-900/50 w-full z-50 backdrop-blur-sm">
+        <div id="progress-bar" class="h-full bg-gradient-to-r from-red-900 to-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)] transition-all duration-500" style="width: 0%;"></div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div id="app" class="relative z-10 flex flex-col items-center justify-center min-h-screen p-6 text-center max-w-3xl mx-auto page-transition">
+        <!-- 内容由 JS 动态注入 -->
+    </div>
+
+    <script>
+        // --- SVG 图标库 (纯字符串，无需加载外部图片) ---
+        const icons = {
+            book: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-neutral-300 opacity-90 mb-6 mx-auto"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`,
+            alert: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-neutral-300 opacity-90 mb-6 mx-auto"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`,
+            eye: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-neutral-300 opacity-90 mb-6 mx-auto"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`,
+            ghost: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-neutral-300 opacity-90 mb-6 mx-auto"><path d="M9 10h.01"/><path d="M15 10h.01"/><path d="M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z"/></svg>`,
+            fingerprint: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-neutral-300 opacity-90 mb-6 mx-auto"><path d="M2 12C2 6.48 6.48 2 12 2s10 4.48 10 10"/><path d="M5 12c0-3.87 3.13-7 7-7s7 3.13 7 7"/><path d="M8 12c0-2.21 1.79-4 4-4s4 1.79 4 4"/><path d="M12 10v2"/></svg>`,
+            xcircle: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-neutral-300 opacity-90 mb-6 mx-auto"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>`,
+            map: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-neutral-300 opacity-90 mb-6 mx-auto"><path d="M3 6l6-3 6 3 6-3v12l-6 3-6-3-6 3V6z"/><path d="M9 3v12"/><path d="M15 9v12"/></svg>`,
+            arrow: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="inline-block ml-2 transition-transform group-hover:translate-x-1"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`
+        };
+
+        // --- 文本数据配置 ---
+        const storyData = {
+            cover: {
+                html: `
+                    <div class="mb-12 relative">
+                        <div class="absolute inset-0 bg-red-600/40 blur-[50px] rounded-full mix-blend-screen animate-heartbeat"></div>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="text-white relative z-10 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)] mx-auto"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    </div>
+                    <h1 class="text-4xl md:text-5xl font-serif font-bold text-white mb-4 tracking-tighter drop-shadow-2xl">江南 7 怪谈</h1>
+                    <p class="text-xl text-neutral-300 font-serif tracking-widest mb-6">关于流水与永巷的忌避</p>
+                    <div class="h-px w-24 bg-red-500 mx-auto my-6 shadow-[0_0_15px_rgba(239,68,68,0.8)]"></div>
+                    <p class="text-red-400 text-sm md:text-base tracking-[0.3em] uppercase mb-12 font-medium drop-shadow-lg">《请在翻页前阅读本规则》</p>
+                    <button onclick="navigate('intro_warning')" class="px-10 py-4 border border-neutral-500 text-white hover:bg-red-900/30 transition-all duration-300 text-sm tracking-widest font-medium backdrop-blur-sm shadow-[0_0_20px_rgba(0,0,0,0.5)] cursor-pointer">
+                        打开书页
+                    </button>
+                `
+            },
+            intro_warning: {
+                html: `
+                    ${icons.alert}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">新怪谈文学作品集·试读前安全须知</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p class="text-red-400 font-bold text-xl drop-shadow-lg">重要提示：</p>
+                        <p>请在阅读这本书之前，<br/>完整阅读本规则。</p>
+                        <p class="italic text-neutral-400 text-sm mt-8">不看会发生奇……读。</p>
+                    </div>
+                    <button onclick="navigate('attributes_1')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            attributes_1: {
+                html: `
+                    ${icons.book}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">书之属性说明 I</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>1. 这不是一本“简单吓你一跳”的恐怖读物。</p>
+                        <p>2. 它是一部新怪谈文学作品集，包含七个中短篇。</p>
+                        <p class="text-base text-neutral-300 border-l-2 border-neutral-500 pl-4 text-left inline-block bg-black/20 p-4 rounded-r-lg">
+                            类别包括但不限于：<br/>宇宙恐怖（克系）<br/>都市寓言<br/>精神异变<br/>民俗怪谈<br/>阈限空间<br/>梦核景观<br/>伪纪录文本
+                        </p>
+                    </div>
+                    <button onclick="navigate('attributes_2')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            attributes_2: {
+                html: `
+                    ${icons.eye}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">书之属性说明 II</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>从精神内核上讲，本书非常严肃。</p>
+                        <p>精准描绘后现代语境下<br/>城市人群的精神生活。</p>
+                        <p>将“怪谈”当作严肃文学的叙事工具，<br/>而非单纯猎奇。</p>
+                    </div>
+                    <button onclick="navigate('attributes_3')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            attributes_3: {
+                html: `
+                    ${icons.ghost}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">书之属性说明 III</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>从怪谈体验上讲，本书非常好玩。</p>
+                        <p>几乎每一篇都“有的玩”，<br/>包括形式、结构、叙述视角和文本机关。</p>
+                        <p class="font-bold text-white text-xl">读法不同，<br/>你参与的“怪谈游戏”也不同。</p>
+                        <div class="mt-8 text-sm text-red-400 font-bold uppercase tracking-widest border border-red-900/50 p-2 inline-block bg-red-950/20">
+                            警告：本规则对“随便翻翻”的读者没有防护效力。
+                        </div>
+                    </div>
+                    <button onclick="navigate('rules_absolute')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            rules_absolute: {
+                html: `
+                    ${icons.fingerprint}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">通用阅读规则：绝对条款</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>在正式开启任意一篇正文前，你必须：</p>
+                        <ol class="list-decimal list-inside space-y-2 text-left inline-block text-neutral-300 bg-black/20 p-6 rounded-lg">
+                            <li>完整阅读本规则；</li>
+                            <li>在心中清晰重复一次书名和作者名；</li>
+                            <li>在脑中确认：“我自愿进入这场文本实验。”</li>
+                        </ol>
+                    </div>
+                    <button onclick="navigate('rules_consequences')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            rules_consequences: {
+                html: `
+                    ${icons.xcircle}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">若跳过此步骤</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>你将难以区分书中的后现代精神困境<br/>与你自己的日常疲惫。</p>
+                        <p>部分人会在三到七天内出现以下现象：</p>
+                        <ul class="text-base text-left space-y-2 bg-neutral-900/80 p-6 rounded-sm border border-neutral-700 text-neutral-300 shadow-lg">
+                            <li>• 觉得自己正在被某种叙述视角盯视；</li>
+                            <li>• 在地铁、出租屋、写字楼过道中，频繁遇见阈限空间感；</li>
+                            <li>• 无法轻易区分：你是个现实中的读者，还是一篇伪纪录小说里正在“阅读规约”的角色。</li>
+                        </ul>
+                    </div>
+                    <button onclick="navigate('split_choice')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        接受并继续 ${icons.arrow}
+                    </button>
+                `
+            },
+            split_choice: {
+                html: `
+                    <h2 class="text-2xl font-serif text-white mb-4">身份分流规则</h2>
+                    <p class="text-neutral-300 mb-12 text-center max-w-md text-lg mx-auto">
+                        在本书设定中，所有读者被无差别划分为两类。<br/>不允许选择“我两个都算”，那等同于拒绝选边，会在后续章节触发不必要的精神残影。
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-2xl mx-auto">
+                        <button onclick="navigate('lit_path_1')" class="group relative p-8 border border-neutral-600 hover:border-white hover:bg-neutral-800/60 transition-all duration-500 text-left bg-neutral-900/60 backdrop-blur-md cursor-pointer">
+                            <h3 class="text-xl font-serif text-white mb-2 font-bold">我是“纯文学读者”</h3>
+                            <p class="text-sm text-neutral-300 group-hover:text-white leading-relaxed">我关注精神困境、后现代语境、语言密度与结构完整性。</p>
+                        </button>
+                        <button onclick="navigate('weird_path_1')" class="group relative p-8 border border-neutral-600 hover:border-red-500 hover:bg-red-950/30 transition-all duration-500 text-left bg-neutral-900/60 backdrop-blur-md cursor-pointer">
+                            <h3 class="text-xl font-mono text-red-200 mb-2 font-bold">我是“怪谈爱好者”</h3>
+                            <p class="text-sm text-neutral-300 group-hover:text-red-100 leading-relaxed">我追求“好玩”、文本机关、纸上密室与惊悚美学。</p>
+                        </button>
+                    </div>
+                `
+            },
+            lit_path_1: {
+                html: `
+                    ${icons.book}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">纯文学读者：阅读顺序</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p class="text-xl font-bold text-white">从第一篇小说按顺序往后读，<br/>严禁跳读。</p>
+                        <p>原因：章节之间存在隐蔽的精神谱系与后现代语境下的思想回响。</p>
+                        <p>若你打乱顺序，<br/>可能错过它们在你精神世界构造的“路线图”。</p>
+                    </div>
+                    <button onclick="navigate('lit_path_2')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            lit_path_2: {
+                html: `
+                    ${icons.map}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">纯文学读者：语境设定</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>阅读时，假定自己处在：<br/>当代中国的现代与后现代特质激烈冲撞的城市语境。</p>
+                        <p>你不是“旁观者”，而是这一语境的原生居民。</p>
+                        <p class="text-base text-neutral-400">小说中一切关于疲惫、内卷、夜晚加班后路边的冷光、突然模糊的人际关系，都默认与你有某种现实勾联。</p>
+                    </div>
+                    <button onclick="navigate('lit_path_3')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            lit_path_3: {
+                html: `
+                    ${icons.eye}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">纯文学读者：漫游指南</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>请在阅读中，尝试完成以下三种漫游：</p>
+                        <div class="space-y-4 text-left inline-block text-base bg-neutral-900/80 p-6 border-l-2 border-neutral-500 text-neutral-200 shadow-lg">
+                            <div><strong class="text-white">1. 精神世界漫游：</strong><br/>不是“看一个角色疯掉”，而是“确认自己没有完全清醒”。</div>
+                            <div><strong class="text-white">2. 叙事方式漫游：</strong><br/>留意文体、视点、语言节奏、象征物。</div>
+                            <div><strong class="text-white">3. 城市幻象漫游：</strong><br/>把视线从纸面移向窗外的城市，观察那里是否有一处场景和书中“互相注视”。</div>
+                        </div>
+                    </div>
+                    <button onclick="navigate('lit_path_4')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            lit_path_4: {
+                html: `
+                    ${icons.fingerprint}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">纯文学读者：作者承诺</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>你可以在阅读时不断挑剔：<br/>文学性、语言密度、结构完整性。</p>
+                        <p>对于这一类读者，作者仅提供一个保证：</p>
+                        <p class="text-2xl font-serif text-white mt-4 border-t border-b border-neutral-600 py-4 font-bold">文学功底是在线的，<br/>态度是严肃的。</p>
+                    </div>
+                    <button onclick="navigate('media_rules')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            weird_path_1: {
+                html: `
+                    ${icons.ghost}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">怪谈爱好者：反向阅读</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p class="text-red-400 font-bold text-2xl mb-4">从《后记》开始读起。</p>
+                        <p>是的，你没看错。</p>
+                        <p>后记在此视为<span class="text-white font-bold mx-1">“怪谈导航室”</span>，<br/>它会告诉你每一篇的玩法、机关与精神方向。</p>
+                    </div>
+                    <button onclick="navigate('weird_path_2')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            weird_path_2: {
+                html: `
+                    ${icons.map}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">怪谈爱好者：游玩章节</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <div>
+                            <p class="text-white font-bold text-lg mb-2">如果你追求的是“好玩”：</p>
+                            <p class="text-base text-neutral-300">请优先体验：1、3、5、6、7<br/>每一篇都可以被当成一个独立的“故事副本”。</p>
+                        </div>
+                        <div class="w-24 h-px bg-neutral-600 mx-auto my-4"></div>
+                        <div>
+                            <p class="text-white font-bold text-lg mb-2">如果你想做一点艺术追求：</p>
+                            <p class="text-base text-neutral-300">请特别关注：2、4、6<br/>它们在结构、隐喻、叙事节奏上的机关更密，适合反复细读、拆解、二创。</p>
+                        </div>
+                    </div>
+                    <button onclick="navigate('weird_path_3')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            weird_path_3: {
+                html: `
+                    ${icons.alert}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">怪谈爱好者：游玩建议</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>你可以把这本书视为：<br/>一部纸上密室，一张精神城市地下地图。</p>
+                        <p class="text-red-400 text-lg font-bold mt-6">请务必记住：</p>
+                        <p>每一篇“好玩”的背后，都站着一个非常严肃的问题。</p>
+                        <p>你若只顾着吓自己，<br/>会错过作者在你耳边悄悄说的话。</p>
+                    </div>
+                    <button onclick="navigate('media_rules')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            media_rules: {
+                html: `
+                    ${icons.eye}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">媒介延伸规则</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>作者计划在书外设置一些“延迟触发”的怪谈线索。</p>
+                        <p>预计会在若干平台发布：<br/>自制播客、自制视频、（也许）自制游戏。</p>
+                    </div>
+                    <button onclick="navigate('media_game')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            media_game: {
+                html: `
+                    ${icons.ghost}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">关于游戏与账号</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>游戏目前处于“想做，但不保证现实物理条件允许”的薛定谔状态。</p>
+                        <p class="text-base text-neutral-300 my-4">你可以在阅读过程中自行想象：<br/>如果七个故事被做成七个关卡，它们会是什么样的场景与机制。<br/>此想象行为本身，已经是你参与游戏的第一步。</p>
+                        <div class="border border-neutral-600 bg-neutral-900/80 p-6 mt-4 text-base shadow-lg text-left">
+                            <p class="font-bold text-white mb-2">关于小红书账号：</p>
+                            <p class="text-neutral-300">任何你在那个账号上看到的额外信息，均可以视为本书的“DLC文本”。它们不改写主线，但会悄悄修改你的理解角度。</p>
+                        </div>
+                    </div>
+                    <button onclick="navigate('safety_warning')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            safety_warning: {
+                html: `
+                    ${icons.alert}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">读者安全提示（精神层面）</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>本书集中描绘城市人群的精神生活，以及后现代语境下的异化、空虚与荒诞感。</p>
+                        <p>因此，当你读到某些情节时，可能出现：</p>
+                        <p class="text-white font-serif text-2xl my-4 font-bold">“这不是小说，这就是我”</p>
+                        <p>的瞬间错觉。</p>
+                    </div>
+                    <button onclick="navigate('safety_symptoms')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            safety_symptoms: {
+                html: `
+                    ${icons.eye}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">症状辨析</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>若出现对楼道、地铁站、写字楼走廊的感知变化，说明你与文本的精神频率开始对接，并不代表你已经被“入侵”。</p>
+                        <p class="text-red-400 mt-8 font-bold text-lg">真正需要警惕的是：</p>
+                        <p class="text-xl text-white">你读完全书，却什么感觉也没有。</p>
+                        <p class="text-base text-neutral-400 mt-4">若出现这种状态，请确认：<br/>你是否真的读了，<br/>或者，你本身就是某一篇伪纪录文本里的角色，<br/>正在执行一项“冷静阅读”的设定任务。</p>
+                    </div>
+                    <button onclick="navigate('postscript_info')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            postscript_info: {
+                html: `
+                    ${icons.book}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">最终连结：关于「后记」</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>本书的“后记”并非传统意义上的“写完感言”。</p>
+                        <p>它让不同阅读路径（纯文学 / 怪谈向）在此处发生汇合。</p>
+                        <div class="flex flex-col gap-4 mt-6 text-base">
+                            <div class="p-4 bg-neutral-900/80 border border-neutral-600 text-neutral-200 shadow-lg">若你从前文一路读来，“后记”是解释。</div>
+                            <div class="p-4 bg-neutral-900/80 border border-neutral-600 text-neutral-200 shadow-lg">若你从“后记”开局，“后记”是邀请函。</div>
+                        </div>
+                    </div>
+                    <button onclick="navigate('final_rule')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        翻页 ${icons.arrow}
+                    </button>
+                `
+            },
+            final_rule: {
+                html: `
+                    ${icons.fingerprint}
+                    <h2 class="text-xl md:text-2xl font-serif text-white mb-8 tracking-widest border-b border-neutral-600 pb-4 inline-block">规则的最后一条</h2>
+                    <div class="text-neutral-200 leading-loose text-lg font-light mb-12 space-y-6 drop-shadow-md">
+                        <p>当你合上书时，请在心中确认：</p>
+                        <p class="text-xl text-white font-bold my-4">1. 你是主动离开文本，<br/>2. 而不是被文本主动放生。</p>
+                        <p class="mt-8 text-base text-neutral-400">如果有一天，你在地铁上突然想起“我当时好像有一份阅读规则”，却想不清楚内容……</p>
+                        <p class="text-red-400 font-bold text-lg mt-2">请不要试图在脑中补完。</p>
+                        <p class="text-base text-neutral-300 mt-4">因为那意味着：这份规则已经完成了它的任务——<br/>它帮你把现实生活，悄悄地，变成了这本新怪谈文学作品集的延长页。</p>
+                    </div>
+                    <button onclick="navigate('end')" class="group inline-flex items-center px-8 py-3 text-sm tracking-[0.2em] text-neutral-300 hover:text-white transition-colors duration-500 border border-transparent hover:border-neutral-500 rounded-full bg-black/40 backdrop-blur-md cursor-pointer">
+                        结束阅读 ${icons.arrow}
+                    </button>
+                `
+            },
+            end: {
+                html: `
+                    <div class="mb-8 text-neutral-400 uppercase tracking-[0.4em] text-xs font-bold">System Status: Permeated</div>
+                    <h2 class="text-3xl md:text-4xl font-serif text-white mb-8">阅读规则到此结束</h2>
+                    <p class="text-neutral-200 mb-12 max-w-lg leading-relaxed text-lg mx-auto">若你已阅读完毕，可以安全地翻页，<br/>进入书中的任何一个故事。</p>
+                    <p class="text-neutral-400 text-sm italic mb-12">不看会发生奇……迹般地错过一整套完整的怪谈宇宙。</p>
+                    <button onclick="resetGame()" class="text-neutral-400 hover:text-white transition-colors text-xs tracking-widest uppercase border-b border-transparent hover:border-white pb-1 cursor-pointer">
+                        Restart Simulation
+                    </button>
+                `
+            }
+        };
+
+        // --- 核心逻辑 ---
+        let historyCount = 0;
+        const totalSteps = 15; // 估算的总步数用于进度条
+
+        function renderState(stateId) {
+            const appDiv = document.getElementById('app');
+            const data = storyData[stateId];
+            
+            // 1. 触发淡出
+            appDiv.classList.remove('page-visible');
+            
+            // 2. 等待淡出动画完成后替换内容并淡入
+            setTimeout(() => {
+                appDiv.innerHTML = data.html;
+                
+                // 强制重绘以确保 CSS 动画生效
+                void appDiv.offsetWidth; 
+                
+                appDiv.classList.add('page-visible');
+            }, 400); // 400ms 对应 CSS transition 的一半时间
+        }
+
+        function updateProgress() {
+            historyCount++;
+            const percentage = Math.min((historyCount / totalSteps) * 100, 100);
+            document.getElementById('progress-bar').style.width = percentage + '%';
+        }
+
+        function navigate(nextState) {
+            updateProgress();
+            renderState(nextState);
+        }
+
+        function resetGame() {
+            historyCount = 0;
+            document.getElementById('progress-bar').style.width = '0%';
+            renderState('cover');
+        }
+
+        // 初始化
+        window.onload = () => {
+            // 初始延迟一下让页面加载完再显示
+            setTimeout(() => {
+                renderState('cover');
+            }, 100);
+        };
+    </script>
+</body>
+</html>
